@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16302b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="כיסוי זמני">
+<title>כיסוי זמני</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* =========================================================
+   הגדרות Firebase — מדביקים כאן את מה ש-Firebase נותן
+   (Project settings → Your apps → Web app → firebaseConfig)
+   כל עוד זה ריק, האפליקציה עובדת רק על המכשיר הזה.
+   ========================================================= */
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+/* שם הקבוצה במסד הנתונים. אפשר לשנות כדי להפעיל כמה תורים נפרדים מאותו פרויקט */
+const GROUP = "kisuy-zmani";
+</script>
+<style>
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#16302b; --muted:#5d716c; --line:#d9e1de;
+  --accent:#e0a526; --accent-ink:#2a1d00; --done:#2f7d62; --danger:#b3412f; --chip:#e8eeec;
+  --display:"Secular One","Assistant",system-ui,sans-serif;
+  --body:"Assistant",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#101917; --surface:#18241f; --ink:#e6efec; --muted:#93a8a2; --line:#2a3833;
+  --accent:#f0b73a; --accent-ink:#241800; --done:#5cc39c; --danger:#e8735f; --chip:#22302b; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;font-size:2rem;margin:0}
+.sync{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--done)} .dot.off{background:var(--danger)}
+h2{font-size:.8rem;letter-spacing:.04em;color:var(--muted);margin:0;font-weight:700}
+[hidden]{display:none!important}
+
+.turn{background:var(--ink);color:var(--bg);border-radius:18px;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.turn .lbl{font-size:.85rem;opacity:.75}
+.turn .who{font-family:var(--display);font-size:2.6rem;line-height:1.1;text-wrap:balance;overflow-wrap:anywhere}
+.turn .after{font-size:.9rem;opacity:.75}
+.turn .actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 18px;cursor:pointer}
+.btn:focus-visible,.icon:focus-visible,input:focus-visible,.check:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn-main{background:var(--accent);color:var(--accent-ink);flex:1 1 200px;font-size:1.05rem}
+.btn-ghost{background:transparent;color:inherit;border:1.5px solid currentColor;opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.empty{border:2px dashed var(--line);border-radius:18px;padding:22px;color:var(--muted);text-align:center}
+.empty b{color:var(--ink)}
+
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+ol.queue{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.queue li{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.check{width:34px;height:34px;flex:none;border-radius:9px;border:2px solid var(--line);background:var(--surface);color:transparent;cursor:pointer;display:grid;place-items:center;padding:0;transition:background .15s,border-color .15s}
+.check svg{width:20px;height:20px}
+.check[aria-checked="true"]{background:var(--done);border-color:var(--done);color:#fff}
+.queue li.next .check{border-color:var(--accent)}
+.queue li.is-done .nm{color:var(--muted)}
+.nm{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.tag{font-size:.75rem;font-weight:700;color:var(--accent-ink);background:var(--accent);border-radius:99px;padding:1px 8px;margin-inline-start:6px}
+.cnt{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.icon{font:inherit;background:none;border:0;color:var(--muted);cursor:pointer;width:32px;height:32px;border-radius:8px;display:grid;place-items:center;flex:none;padding:0}
+.icon:hover{background:var(--chip);color:var(--ink)}
+.icon:disabled{opacity:.3;cursor:default;background:none}
+.icon.del:hover{color:var(--danger)}
+.icon svg{width:18px;height:18px}
+.confirm{flex:1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+
+form.add{display:flex;gap:8px;margin-top:12px}
+form.add input{flex:1;min-width:0;font:inherit;font-size:16px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn-add{background:var(--ink);color:var(--bg)}
+.hint{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+
+.log{list-style:none;margin:0;padding:0}
+.log li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:.95rem}
+.log .when{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.85rem}
+.log .skip{color:var(--muted);font-style:italic}
+.link{font:inherit;background:none;border:0;color:var(--danger);cursor:pointer;font-weight:600;padding:4px}
+.muted{color:var(--muted);font-size:.9rem}
+.notice{background:var(--chip);border-radius:14px;padding:14px 16px;font-size:.9rem;color:var(--muted)}
+.notice b{color:var(--ink)}
+.toast{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom,0px));margin:0 auto;width:max-content;max-width:calc(100% - 32px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;text-align:center}
+.toast.on{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.toast,.check{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>כיסוי זמני</h1>
+    <span class="sync"><span class="dot" id="dot"></span><span id="sync">טוען…</span></span>
+  </header>
+
+  <div class="notice" id="setupNote" hidden><b>מצב מקומי:</b> הנתונים נשמרים רק בטלפון הזה. כדי לסנכרן בין כמה טלפונים צריך להדביק את הגדרות Firebase בראש הקובץ.</div>
+
+  <section id="turnBox" aria-live="polite"></section>
+
+  <section>
+    <div class="row"><h2>סדר התור</h2><span class="muted" id="roundLbl"></span></div>
+    <ol class="queue" id="queue"></ol>
+    <form class="add" id="addForm">
+      <input id="nameInput" placeholder="שם חדש" maxlength="40" autocomplete="off" aria-label="שם חדש">
+      <button class="btn btn-add" type="submit">הוספה</button>
+    </form>
+    <p class="hint" id="hint"></p>
+  </section>
+
+  <section>
+    <div class="row"><h2>היסטוריה</h2><button class="link" id="undoBtn" hidden>ביטול הפעולה האחרונה</button></div>
+    <ul class="log" id="log"></ul>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const ICON = {
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'
+};
+const LS = 'kisuy-zmani-' + GROUP;
+let state = normalize(null);
+let ref = null, pendingDelete = null;
+
+const $ = id => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = ts => new Date(ts).toLocaleString('he-IL', {day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit'});
+const toArr = v => Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === 'object' ? Object.values(v) : []);
+
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2400); }
+function setSync(text, cls){ $('sync').textContent = text; $('dot').className = 'dot ' + (cls||''); }
+
+function normalize(s){
+  const names = toArr(s?.names).filter(n => n && n.id && n.name);
+  let next = Number.isInteger(s?.next) ? s.next : 0;
+  next = names.length ? ((next % names.length) + names.length) % names.length : 0;
+  const log = toArr(s?.log).slice(0, 200);
+  const round = Number.isInteger(s?.round) ? s.round : 1;
+  return { names, next, log, round };
+}
+
+/* ---- State changes: each one is a pure function old state → new state.
+   With Firebase it runs inside a transaction, so two phones tapping at once never overwrite each other. ---- */
+function doneSet(st){
+  return new Set(st.log.filter(e => e.type === 'cover' && (e.round ?? 1) === st.round).map(e => e.id));
+}
+function nextOpen(st, from, done){
+  const n = st.names.length;
+  for (let k = 1; k <= n; k++){ const j = (from + k) % n; if (!done.has(st.names[j].id)) return j; }
+  return (from + 1) % n;
+}
+const ops = {
+  tick: id => st => {
+    const idx = st.names.findIndex(n => n.id === id); if (idx < 0) return st;
+    const done = doneSet(st); if (done.has(id)) return st;
+    const p = st.names[idx];
+    const entry = { type:'cover', id:p.id, name:p.name, at:Date.now(), round:st.round, prevNext:st.next, prevRound:st.round };
+    done.add(id);
+    if (done.size >= st.names.length) return { ...st, round: st.round + 1, next: (idx + 1) % st.names.length, log: [entry, ...st.log] };
+    return { ...st, next: nextOpen(st, idx, done), log: [entry, ...st.log] };
+  },
+  untick: id => st => {
+    const i = st.log.findIndex(e => e.type === 'cover' && e.id === id && (e.round ?? 1) === st.round);
+    if (i < 0) return st;
+    const log = st.log.slice(); log.splice(i, 1);
+    return { ...st, log, next: Math.max(0, st.names.findIndex(n => n.id === id)) };
+  },
+  skip: () => st => {
+    if (st.names.length < 2) return st;
+    const cur = st.names[st.next];
+    return { ...st, next: nextOpen(st, st.next, doneSet(st)),
+      log: [{ type:'skip', id:cur.id, name:cur.name, at:Date.now(), round:st.round, prevNext:st.next, prevRound:st.round }, ...st.log] };
+  },
+  undo: () => st => {
+    const [last, ...rest] = st.log; if (!last) return st;
+    return { ...st, log: rest,
+      next: Number.isInteger(last.prevNext) ? last.prevNext : st.next,
+      round: Number.isInteger(last.prevRound) ? last.prevRound : st.round };
+  },
+  add: name => st => st.names.some(n => n.name === name) ? st : { ...st, names: [...st.names, { id: uid(), name }] },
+  move: (i, d) => st => {
+    const j = i + d; if (j < 0 || j >= st.names.length) return st;
+    const names = st.names.slice(), nextId = st.names[st.next]?.id;
+    [names[i], names[j]] = [names[j], names[i]];
+    return { ...st, names, next: Math.max(0, names.findIndex(n => n.id === nextId)) };
+  },
+  remove: id => st => {
+    const nextId = st.names[st.next]?.id;
+    const names = st.names.filter(n => n.id !== id);
+    let next = names.findIndex(n => n.id === nextId);
+    if (next < 0){ const idx = st.names.findIndex(n => n.id === id); next = names.length ? idx % names.length : 0; }
+    return { ...st, names, next };
+  }
+};
+
+function apply(op){
+  // Optimistic local update
+  state = normalize(op(state));
+  render();
+  if (ref){
+    ref.transaction(cur => normalize(op(normalize(cur))))
+      .catch(() => toast('השמירה נכשלה. בדקי חיבור לאינטרנט'));
+  } else {
+    try { localStorage.setItem(LS, JSON.stringify(state)); } catch(e){}
+  }
+}
+
+function countFor(id){ return state.log.filter(e => e.type === 'cover' && e.id === id).length; }
+function nameOf(id){ return state.names.find(n => n.id === id)?.name; }
+
+function tick(id){
+  const before = state.round;
+  apply(ops.tick(id));
+  toast('✓ ' + nameOf(id) + ' עשתה כיסוי' + (state.round !== before ? ' · כולן עשו, מתחיל סבב חדש' : ''));
+}
+
+function render(){
+  const { names, next, log } = state;
+  if (!names.length){
+    $('turnBox').innerHTML = '<div class="empty"><b>הרשימה ריקה.</b><br>הוסיפי למטה את השמות לפי הסדר שבו הן עושות כיסוי (לפחות 4).</div>';
+  } else {
+    const cur = names[next], after = names[nextOpen(state, next, new Set([...doneSet(state), cur.id]))];
+    $('turnBox').innerHTML = `<div class="turn">
+      <div><div class="lbl">הכיסוי הבא אצל</div><div class="who">${esc(cur.name)}</div>
+      ${names.length > 1 && after && after.id !== cur.id ? `<div class="after">ואחריה: ${esc(after.name)}</div>` : ''}</div>
+      <div class="actions">
+        <button class="btn btn-main" id="coverBtn">${esc(cur.name)} עשתה כיסוי ✓</button>
+        <button class="btn btn-ghost" id="skipBtn" ${names.length<2?'disabled':''}>דילוג עליה</button>
+      </div></div>`;
+    $('coverBtn').onclick = () => tick(cur.id);
+    $('skipBtn').onclick = () => apply(ops.skip());
+  }
+  const done = doneSet(state);
+  $('roundLbl').textContent = names.length ? `סבב ${state.round} · ${done.size} מתוך ${names.length} עשו כיסוי` : '';
+  $('queue').innerHTML = names.map((n, i) => {
+    const d = done.has(n.id);
+    if (pendingDelete === n.id) return `<li><span class="confirm">להסיר את ${esc(n.name)} מהרשימה?
+      <button class="link" data-act="confirmDel" data-id="${n.id}">כן, להסיר</button>
+      <button class="link" style="color:var(--muted)" data-act="cancelDel">ביטול</button></span></li>`;
+    return `<li class="${i===next?'next':''} ${d?'is-done':''}">
+      <button class="check" role="checkbox" aria-checked="${d}" aria-label="${esc(n.name)} עשתה כיסוי" data-act="${d?'untick':'tick'}" data-id="${n.id}">${ICON.ok}</button>
+      <span class="nm">${esc(n.name)}${i===next?'<span class="tag">בתור</span>':''}</span>
+      <span class="cnt">${countFor(n.id)} סה״כ</span>
+      <button class="icon" aria-label="למעלה" data-act="up" data-i="${i}" ${i===0?'disabled':''}>${ICON.up}</button>
+      <button class="icon" aria-label="למטה" data-act="down" data-i="${i}" ${i===names.length-1?'disabled':''}>${ICON.down}</button>
+      <button class="icon del" aria-label="הסרה" data-act="del" data-id="${n.id}">${ICON.x}</button>
+    </li>`;
+  }).join('');
+  $('hint').textContent = names.length < 4
+    ? `נוספו ${names.length} מתוך לפחות 4 שמות`
+    : 'סמני ✓ ליד מי שעשתה כיסוי, והתור עובר לבאה בלי ✓. כשלכולן יש ✓ מתחיל סבב חדש.';
+  $('log').innerHTML = log.length ? log.slice(0, 30).map(e =>
+    `<li><span class="${e.type==='skip'?'skip':''}">${esc(nameOf(e.id) || e.name)} ${e.type==='skip'?'· דילוג':'עשתה כיסוי'}</span><span class="when">${fmt(e.at)}</span></li>`
+  ).join('') : '<li class="muted" style="border:0">עדיין לא נרשמו כיסויים.</li>';
+  $('undoBtn').hidden = !log.length;
+}
+
+$('queue').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-act]'); if (!b) return;
+  const i = +b.dataset.i, id = b.dataset.id;
+  switch (b.dataset.act){
+    case 'tick': tick(id); break;
+    case 'untick': apply(ops.untick(id)); toast('הסימון של ' + nameOf(id) + ' הוסר'); break;
+    case 'up': apply(ops.move(i, -1)); break;
+    case 'down': apply(ops.move(i, 1)); break;
+    case 'del': pendingDelete = id; render(); break;
+    case 'cancelDel': pendingDelete = null; render(); break;
+    case 'confirmDel': pendingDelete = null; apply(ops.remove(id)); break;
+  }
+});
+$('addForm').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const name = $('nameInput').value.trim(); if (!name) return;
+  if (state.names.some(n => n.name === name)){ toast('השם הזה כבר ברשימה'); return; }
+  apply(ops.add(name)); $('nameInput').value = ''; $('nameInput').focus();
+});
+$('undoBtn').onclick = () => { apply(ops.undo()); toast('הפעולה האחרונה בוטלה'); };
+
+/* ---- Start ---- */
+try { const s = localStorage.getItem(LS); if (s) state = normalize(JSON.parse(s)); } catch(e){}
+render();
+
+if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.databaseURL && window.firebase){
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.database();
+    ref = db.ref('groups/' + GROUP);
+    setSync('מתחבר…');
+    ref.on('value', snap => {
+      state = normalize(snap.val());
+      try { localStorage.setItem(LS, JSON.stringify(state)); } catch(e){}
+      render();
+    }, err => { setSync('אין הרשאה למסד הנתונים', 'off'); console.error(err); });
+    db.ref('.info/connected').on('value', s => s.val() ? setSync('מסונכרן', 'on') : setSync('לא מחובר. השינויים יישלחו כשהחיבור יחזור', 'off'));
+  } catch(e){
+    console.error(e); setSync('הגדרות Firebase שגויות', 'off');
+  }
+} else {
+  setSync('שמור רק בטלפון הזה');
+  $('setupNote').hidden = false;
+}
+</script>
+</body>
+</html>
